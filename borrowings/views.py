@@ -1,9 +1,13 @@
-from rest_framework import viewsets, mixins
-from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
 
-import borrowings
+from rest_framework import viewsets, mixins, status
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from borrowings.models import Borrowing
 from borrowings.serializers import BorrowingSerializer, BorrowingDetailSerializer, BorrowingCreateSerializer
+from rest_framework.decorators import action
 
 
 class BorrowingViewSet(
@@ -36,3 +40,20 @@ class BorrowingViewSet(
             return borrowing
 
         return borrowing.filter(user=self.request.user)
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        permission_classes=(IsAuthenticated,),
+        url_path="return",
+    )
+    def return_borrowing(self, request, pk=None):
+        borrowing = self.get_object()
+        if borrowing.actual_return_date:
+            raise ValidationError({"actual_return_date": "The borrowing can be returned only once"})
+        borrowing.actual_return_date = timezone.localdate()
+        borrowing.book.inventory += 1
+        borrowing.save()
+        borrowing.book.save()
+        serializer = BorrowingSerializer(borrowing)
+        return Response(serializer.data, status=status.HTTP_200_OK)
