@@ -48,6 +48,8 @@ class BorrowingCreateSerializer(BorrowingSerializer):
         book.save()
         instance = super().create(validated_data)
         send_telegram_notification(
-            f"User: {user}, borrowed book: {book.title}, expected return date: {instance.expected_return_date}",
+            f"User: {user}"
+            f"\nborrowed book: {book.title}"
+            f"\nexpected return date: {instance.expected_return_date}",
         )
         return instance
