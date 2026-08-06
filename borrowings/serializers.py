@@ -58,9 +58,12 @@ class BorrowingCreateSerializer(BorrowingSerializer):
         money_to_pay = days * book.daily_fee
         pay_in_cents = int(money_to_pay * 100)
         client = StripeClient(os.environ.get("STRIPE_SECRET_KEY"))
+        base_url = self.context["request"].build_absolute_uri("/payments/")
+        success_url = f"{base_url}success/?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{base_url}cancel/?session_id={{CHECKOUT_SESSION_ID}}"
         session = client.v1.checkout.sessions.create({
-            "success_url": "https://example.com/success",
-            "cancel_url": "https://example.com/cancel",
+            "success_url": success_url,
+            "cancel_url": cancel_url,
             "line_items": [{
                 "price_data": {
                     "currency": "usd",
