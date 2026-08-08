@@ -6,6 +6,7 @@ from borrowings.models import Borrowing
 from borrowings.telegram import send_telegram_notification
 from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
 
 from payments.models import Payment
 from payments.serializers import PaymentSerializer
@@ -54,7 +55,9 @@ class BorrowingCreateSerializer(BorrowingSerializer):
         user = self.context["request"].user
         validated_data["user"] = user
         book = validated_data["book"]
-        stripe_session = create_stripe_session(validated_data, self.context["request"])
+        days = max((validated_data["expected_return_date"] - timezone.localdate()).days, 1)
+        money_to_pay = days * validated_data["book"].daily_fee
+        stripe_session = create_stripe_session(book, self.context["request"], money_to_pay)
 
         with transaction.atomic():
             Book.objects.filter(pk=book.id).update(
@@ -67,7 +70,7 @@ class BorrowingCreateSerializer(BorrowingSerializer):
                 borrowing=instance,
                 session_url=stripe_session["session_url"],
                 session_id=stripe_session["session_id"],
-                money_to_pay=stripe_session["money_to_pay"],
+                money_to_pay=money_to_pay,
             )
         send_telegram_notification(
             f"User: {user}"
