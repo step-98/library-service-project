@@ -51,6 +51,16 @@ class BorrowingCreateSerializer(BorrowingSerializer):
             )
         return value
 
+    def validate(self, attrs):
+        user = self.context["request"].user
+        pending_payments = Payment.objects.filter(
+            borrowing__user=user,
+            status=Payment.Status.PENDING,
+        )
+        if pending_payments.exists():
+            raise serializers.ValidationError({"pending_payments": "You have unpaid pending payments. Please complete them before borrowing a new book."})
+        return attrs
+
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["user"] = user

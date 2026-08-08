@@ -151,5 +151,9 @@ CELERY_BEAT_SCHEDULE = {
     "run-every-day": {
         "task": "borrowings.tasks.overdue_borrowings",
         "schedule": crontab(hour=9)
+    },
+    "run-every-minute": {
+        "task": "payments.tasks.expiring_sessions",
+        "schedule": crontab()
     }
 }
