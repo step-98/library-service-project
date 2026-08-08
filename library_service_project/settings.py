@@ -138,6 +138,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
     "ROTATE_REFRESH_TOKEN": False,
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZE",
 }
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")

@@ -1,16 +1,14 @@
-import os
-from django.utils import timezone
-
 from rest_framework import serializers
-from stripe import StripeClient
-
+from payments.stripe import create_stripe_session
 from books.models import Book
 from books.serializers import BookSerializer
 from borrowings.models import Borrowing
 from borrowings.telegram import send_telegram_notification
 from django.db import transaction
+from django.db.models import F
 
 from payments.models import Payment
+from payments.serializers import PaymentSerializer
 
 
 class BorrowingSerializer(serializers.ModelSerializer):
@@ -29,6 +27,9 @@ class BorrowingSerializer(serializers.ModelSerializer):
 class BorrowingDetailSerializer(BorrowingSerializer):
     book = BookSerializer(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    payments = PaymentSerializer(read_only=True, many=True)
+    class Meta(BorrowingSerializer.Meta):
+        fields = BorrowingSerializer.Meta.fields + ("payments",)
 
 
 class BorrowingCreateSerializer(BorrowingSerializer):
@@ -53,38 +54,20 @@ class BorrowingCreateSerializer(BorrowingSerializer):
         user = self.context["request"].user
         validated_data["user"] = user
         book = validated_data["book"]
-        book.inventory -= 1
-        days = max((validated_data["expected_return_date"] - timezone.localdate()).days, 1)
-        money_to_pay = days * book.daily_fee
-        pay_in_cents = int(money_to_pay * 100)
-        client = StripeClient(os.environ.get("STRIPE_SECRET_KEY"))
-        base_url = self.context["request"].build_absolute_uri("/payments/")
-        success_url = f"{base_url}success/?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{base_url}cancel/?session_id={{CHECKOUT_SESSION_ID}}"
-        session = client.v1.checkout.sessions.create({
-            "success_url": success_url,
-            "cancel_url": cancel_url,
-            "line_items": [{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {
-                        "name": book.title,
-                    },
-                    "unit_amount": pay_in_cents
-                },
-                "quantity": 1
-            }],
-            "mode": "payment",
-        })
+        stripe_session = create_stripe_session(validated_data, self.context["request"])
+
         with transaction.atomic():
-            book.save()
+            Book.objects.filter(pk=book.id).update(
+                inventory=F("inventory") - 1,
+            )
+            book.refresh_from_db()
             instance = super().create(validated_data)
 
             Payment.objects.create(
                 borrowing=instance,
-                session_url=session.url,
-                session_id=session.id,
-                money_to_pay=money_to_pay,
+                session_url=stripe_session["session_url"],
+                session_id=stripe_session["session_id"],
+                money_to_pay=stripe_session["money_to_pay"],
             )
         send_telegram_notification(
             f"User: {user}"
