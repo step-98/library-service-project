@@ -29,6 +29,7 @@ class BorrowingDetailSerializer(BorrowingSerializer):
     book = BookSerializer(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     payments = PaymentSerializer(read_only=True, many=True)
+
     class Meta(BorrowingSerializer.Meta):
         fields = BorrowingSerializer.Meta.fields + ("payments",)
 
@@ -58,16 +59,24 @@ class BorrowingCreateSerializer(BorrowingSerializer):
             status=Payment.Status.PENDING,
         )
         if pending_payments.exists():
-            raise serializers.ValidationError({"pending_payments": "You have unpaid pending payments. Please complete them before borrowing a new book."})
+            raise serializers.ValidationError(
+                {
+                    "pending_payments": "You have unpaid pending payments. Please complete them before borrowing a new book."
+                }
+            )
         return attrs
 
     def create(self, validated_data):
         user = self.context["request"].user
         validated_data["user"] = user
         book = validated_data["book"]
-        days = max((validated_data["expected_return_date"] - timezone.localdate()).days, 1)
+        days = max(
+            (validated_data["expected_return_date"] - timezone.localdate()).days, 1
+        )
         money_to_pay = days * validated_data["book"].daily_fee
-        stripe_session = create_stripe_session(book, self.context["request"], money_to_pay)
+        stripe_session = create_stripe_session(
+            book, self.context["request"], money_to_pay
+        )
 
         with transaction.atomic():
             Book.objects.filter(pk=book.id).update(
