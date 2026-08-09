@@ -56,7 +56,7 @@ class PaymentCancelView(APIView):
         return Response(
             {
                 "detail": "Payment can be completed later."
-                          " The session is still available for 24 hours."
+                " The session is still available for 24 hours."
             }
         )
 
