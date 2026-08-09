@@ -61,7 +61,9 @@ class BorrowingCreateSerializer(BorrowingSerializer):
         if pending_payments.exists():
             raise serializers.ValidationError(
                 {
-                    "pending_payments": "You have unpaid pending payments. Please complete them before borrowing a new book."
+                    "pending_payments": "You have unpaid pending payments. "
+                                        "Please complete them before borrowing "
+                                        "a new book."
                 }
             )
         return attrs

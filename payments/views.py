@@ -55,7 +55,8 @@ class PaymentCancelView(APIView):
     def get(self, request):
         return Response(
             {
-                "detail": "Payment can be completed later. The session is still available for 24 hours."
+                "detail": "Payment can be completed later."
+                          " The session is still available for 24 hours."
             }
         )
 
