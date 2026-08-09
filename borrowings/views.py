@@ -8,7 +8,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from borrowings.models import Borrowing
-from borrowings.serializers import BorrowingSerializer, BorrowingDetailSerializer, BorrowingCreateSerializer
+from borrowings.serializers import (
+    BorrowingSerializer,
+    BorrowingDetailSerializer,
+    BorrowingCreateSerializer,
+)
 from rest_framework.decorators import action
 
 from payments.models import Payment
@@ -16,15 +20,18 @@ from payments.stripe import create_stripe_session
 
 FINE_MULTIPLIER = 2
 
+
 class BorrowingViewSet(
     mixins.RetrieveModelMixin,
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
-    viewsets.GenericViewSet
+    viewsets.GenericViewSet,
 ):
     queryset = Borrowing.objects.all()
     serializer_class = BorrowingSerializer
-    permission_classes = [IsAuthenticated,]
+    permission_classes = [
+        IsAuthenticated,
+    ]
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -40,7 +47,7 @@ class BorrowingViewSet(
         if is_active and is_active.lower() == "true":
             borrowing = borrowing.filter(actual_return_date__isnull=True)
         if self.request.user.is_staff:
-            user_id =self.request.query_params.get("user_id", None)
+            user_id = self.request.query_params.get("user_id", None)
             if user_id:
                 borrowing = borrowing.filter(user_id=user_id)
             return borrowing
@@ -52,12 +59,15 @@ class BorrowingViewSet(
         detail=True,
         permission_classes=(IsAuthenticated,),
         url_path="return",
+        url_name="return",
     )
     def return_borrowing(self, request, pk=None):
         borrowing = self.get_object()
 
         if borrowing.actual_return_date:
-            raise ValidationError({"actual_return_date": "The borrowing can be returned only once"})
+            raise ValidationError(
+                {"actual_return_date": "The borrowing can be returned only once"}
+            )
 
         actual_return_date = timezone.localdate()
         money_to_pay = None
@@ -66,7 +76,9 @@ class BorrowingViewSet(
         if actual_return_date > borrowing.expected_return_date:
             overdue_days = (actual_return_date - borrowing.expected_return_date).days
             money_to_pay = overdue_days * borrowing.book.daily_fee * FINE_MULTIPLIER
-            stripe_session = create_stripe_session(borrowing.book, self.request, money_to_pay)
+            stripe_session = create_stripe_session(
+                borrowing.book, self.request, money_to_pay
+            )
 
         with transaction.atomic():
             borrowing.actual_return_date = actual_return_date
@@ -83,7 +95,6 @@ class BorrowingViewSet(
                     money_to_pay=money_to_pay,
                     type=Payment.Type.FINE,
                 )
-
 
         serializer = BorrowingSerializer(borrowing)
         return Response(serializer.data, status=status.HTTP_200_OK)

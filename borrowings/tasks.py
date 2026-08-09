@@ -7,8 +7,7 @@ from celery import shared_task
 @shared_task
 def overdue_borrowings() -> None:
     borrowings = Borrowing.objects.filter(
-        expected_return_date__lte=timezone.localdate(),
-        actual_return_date__isnull=True
+        expected_return_date__lte=timezone.localdate(), actual_return_date__isnull=True
     )
     if borrowings.exists():
         send_telegram_notification("Today's borrowings overdue:")

@@ -14,9 +14,7 @@ from payments.stripe import create_stripe_session
 
 
 class PaymentViewSet(
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
@@ -42,7 +40,9 @@ class PaymentViewSet(
         if payment.status != Payment.Status.EXPIRED:
             raise ValidationError({"detail": "Payment doesn't have to be renewed."})
         else:
-            stripe_session = create_stripe_session(payment.borrowing.book, self.request, payment.money_to_pay)
+            stripe_session = create_stripe_session(
+                payment.borrowing.book, self.request, payment.money_to_pay
+            )
             Payment.objects.filter(pk=payment.id).update(
                 session_url=stripe_session["session_url"],
                 session_id=stripe_session["session_id"],
@@ -53,7 +53,12 @@ class PaymentViewSet(
 
 class PaymentCancelView(APIView):
     def get(self, request):
-        return Response({"detail": "Payment can be completed later. The session is still available for 24 hours."})
+        return Response(
+            {
+                "detail": "Payment can be completed later."
+                " The session is still available for 24 hours."
+            }
+        )
 
 
 class PaymentSuccessView(APIView):
@@ -70,5 +75,6 @@ class PaymentSuccessView(APIView):
                 f"\nuser: {payment.borrowing.user}"
                 f"\nbook: {payment.borrowing.book.title}"
                 f"\nstatus: {payment.status}"
-                f"\npaid: {payment.money_to_pay} USD",)
+                f"\npaid: {payment.money_to_pay} USD",
+            )
         return Response({"detail": "Payment has been successfully completed"})

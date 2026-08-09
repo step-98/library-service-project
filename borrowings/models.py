@@ -10,7 +10,9 @@ class Borrowing(models.Model):
     expected_return_date = models.DateField()
     actual_return_date = models.DateField(null=True, blank=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="borrowings")
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="borrowings")
+    user = models.ForeignKey(
+        get_user_model(), on_delete=models.CASCADE, related_name="borrowings"
+    )
 
     class Meta:
         ordering = ["borrow_date"]
@@ -20,7 +22,8 @@ class Borrowing(models.Model):
                 name="borrowing_expected_return_date_greater_than_borrow_date",
             ),
             CheckConstraint(
-                condition=models.Q(actual_return_date__isnull=True) | models.Q(actual_return_date__gte=models.F("borrow_date")),
+                condition=models.Q(actual_return_date__isnull=True)
+                | models.Q(actual_return_date__gte=models.F("borrow_date")),
                 name="actual_return_date_is_null_or_greater_than_borrow_date",
-            )
+            ),
         ]

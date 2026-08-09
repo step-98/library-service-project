@@ -43,11 +43,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-
     "books",
     "borrowings",
     "payments",
-    "user"
+    "user",
 ]
 
 AUTH_USER_MODEL = "user.User"
@@ -135,7 +134,7 @@ STATIC_URL = "static/"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-       "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
 }
 
@@ -155,10 +154,10 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 CELERY_BEAT_SCHEDULE = {
     "run-every-day": {
         "task": "borrowings.tasks.overdue_borrowings",
-        "schedule": crontab(hour=9)
+        "schedule": crontab(hour=9),
     },
     "run-every-minute": {
         "task": "payments.tasks.expiring_sessions",
-        "schedule": crontab()
-    }
+        "schedule": crontab(),
+    },
 }
